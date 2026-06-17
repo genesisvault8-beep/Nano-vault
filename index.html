@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nano — APIs Are the Future. This is Your Gateway.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Inter:wght@300;400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #030810;
+  --surface:  #080f1e;
+  --panel:    #0c1628;
+  --border:   rgba(0,255,231,0.08);
+  --cyan:     #00ffe7;
+  --green:    #00ff88;
+  --purple:   #a855f7;
+  --red:      #ff4466;
+  --text:     #c8d8e8;
+  --dim:      #4a6070;
+  --bright:   #ffffff;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.4;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 40px;
+  background: rgba(3,8,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 20px;
+  color: var(--bright); letter-spacing: -0.5px;
+}
+.nav-logo span { color: var(--cyan); }
+.nav-logo sub { font-size: 10px; color: var(--dim); font-weight: 400; vertical-align: super; margin-left: 2px; }
+
+.nav-links {
+  display: flex; align-items: center; gap: 32px;
+  list-style: none;
+}
+.nav-links a {
+  color: var(--dim); text-decoration: none;
+  font-size: 13px; letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--cyan); }
+
+.nav-cta {
+  background: var(--cyan); color: #000 !important;
+  padding: 8px 20px; border-radius: 6px;
+  font-weight: 500; font-size: 13px !important;
+  transition: opacity 0.2s !important;
+}
+.nav-cta:hover { opacity: 0.85; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 120px 24px 80px;
+  position: relative; text-align: center;
+}
+
+/* Glow orbs */
+.hero::after {
+  content: '';
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,255,231,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%, -60%);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0,255,231,0.06);
+  border: 1px solid rgba(0,255,231,0.2);
+  border-radius: 100px;
+  padding: 6px 16px; margin-bottom: 32px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; color: var(--cyan);
+}
+.hero-eyebrow::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.hero-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: clamp(36px, 6vw, 72px);
+  line-height: 1.05;
+  color: var(--bright);
+  letter-spacing: -2px;
+  max-width: 820px;
+  margin-bottom: 24px;
+}
+.hero-title .accent { color: var(--cyan); }
+.hero-title .accent2 { color: var(--purple); }
+
+.hero-sub {
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--dim);
+  max-width: 520px;
+  margin-bottom: 48px;
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+.hero-ctas {
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 72px;
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--cyan), var(--green));
+  color: #000; font-weight: 600; font-size: 14px;
+  padding: 14px 32px; border-radius: 8px;
+  text-decoration: none; transition: all 0.3s;
+  box-shadow: 0 0 30px rgba(0,255,231,0.25);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 50px rgba(0,255,231,0.4);
+}
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent;
+  border: 1px solid rgba(0,255,231,0.25);
+  color: var(--text); font-size: 14px;
+  padding: 14px 32px; border-radius: 8px;
+  text-decoration: none; transition: all 0.3s;
+}
+.btn-ghost:hover {
+  border-color: var(--cyan); color: var(--cyan);
+  background: rgba(0,255,231,0.04);
+}
+
+/* ── TERMINAL DEMO ── */
+.terminal-demo {
+  width: 100%; max-width: 700px;
+  background: var(--surface);
+  border: 1px solid rgba(0,255,231,0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 60px rgba(0,255,231,0.05);
+  text-align: left;
+  position: relative; z-index: 1;
+}
+
+.term-topbar {
+  background: var(--panel);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.term-dot { width: 10px; height: 10px; border-radius: 50%; }
+.term-dot.r { background: #ff5f56; }
+.term-dot.y { background: #ffbd2e; }
+.term-dot.g { background: #27c93f; }
+.term-title {
+  margin-left: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; color: var(--dim); letter-spacing: 1px;
+}
+
+.term-body {
+  padding: 20px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; line-height: 1.9;
+  min-height: 260px;
+}
+
+.tl { display: block; }
+.t-prompt { color: var(--cyan); }
+.t-cmd { color: var(--bright); }
+.t-ok { color: var(--green); }
+.t-out { color: var(--text); }
+.t-info { color: var(--cyan); }
+.t-purple { color: var(--purple); }
+.t-dim { color: var(--dim); }
+.t-err { color: var(--red); }
+.cursor-blink {
+  display: inline-block; width: 7px; height: 13px;
+  background: var(--cyan); vertical-align: middle;
+  animation: blink 1s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── STATS ── */
+.stats {
+  display: flex; gap: 48px; justify-content: center; flex-wrap: wrap;
+  padding: 60px 24px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stat { text-align: center; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px; font-weight: 800;
+  color: var(--bright); letter-spacing: -1px;
+}
+.stat-num span { color: var(--cyan); }
+.stat-label {
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--dim);
+  margin-top: 4px;
+}
+
+/* ── FEATURES ── */
+.section {
+  padding: 100px 24px;
+  max-width: 1100px; margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 3px;
+  color: var(--cyan); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800; color: var(--bright);
+  letter-spacing: -1px; line-height: 1.1;
+  margin-bottom: 64px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+
+.feature-card {
+  background: var(--surface);
+  padding: 36px 32px;
+  transition: background 0.3s;
+  position: relative;
+}
+.feature-card:hover { background: var(--panel); }
+
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+.ic-cyan { background: rgba(0,255,231,0.08); border-color: rgba(0,255,231,0.2); }
+.ic-green { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.2); }
+.ic-purple { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.2); }
+.ic-red { background: rgba(255,68,102,0.08); border-color: rgba(255,68,102,0.2); }
+
+.feature-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: var(--bright); margin-bottom: 10px;
+}
+.feature-desc { font-size: 14px; color: var(--dim); line-height: 1.7; }
+
+/* ── HOW IT WORKS ── */
+.how-section {
+  padding: 80px 24px 100px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.how-inner { max-width: 1100px; margin: 0 auto; }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 40px; margin-top: 0;
+}
+
+.step {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.step-num {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  color: var(--cyan);
+}
+
+.step-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 700;
+  color: var(--bright);
+}
+
+.step-desc { font-size: 14px; color: var(--dim); line-height: 1.7; }
+
+/* ── NVAULT SHOWCASE ── */
+.nvault-section {
+  padding: 100px 24px;
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center;
+}
+
+.nvault-code {
+  background: var(--surface);
+  border: 1px solid rgba(0,255,231,0.12);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.nvault-code .term-topbar { }
+.code-body {
+  padding: 24px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px; line-height: 2;
+}
+.c-comment { color: var(--dim); }
+.c-cmd { color: var(--cyan); }
+.c-val { color: var(--green); }
+.c-str { color: var(--purple); }
+.c-key { color: #ffbd2e; }
+
+.nvault-info .section-label { margin-bottom: 12px; }
+.nvault-info .section-title { margin-bottom: 20px; font-size: clamp(24px, 3vw, 36px); }
+.nvault-info p { color: var(--dim); font-size: 14px; line-height: 1.8; margin-bottom: 24px; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  padding: 4px 12px; border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+.tag.cyan { border-color: rgba(0,255,231,0.3); color: var(--cyan); }
+.tag.green { border-color: rgba(0,255,136,0.3); color: var(--green); }
+.tag.purple { border-color: rgba(168,85,247,0.3); color: var(--purple); }
+
+/* ── CTA BANNER ── */
+.cta-banner {
+  padding: 100px 24px;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+.cta-banner::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,255,231,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-banner-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(28px, 5vw, 56px);
+  font-weight: 800; color: var(--bright);
+  letter-spacing: -1.5px; line-height: 1.1;
+  margin-bottom: 16px;
+}
+.cta-banner-sub {
+  color: var(--dim); font-size: 16px;
+  margin-bottom: 40px; font-weight: 300;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 32px 40px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+}
+.footer-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 16px;
+  color: var(--bright);
+}
+.footer-logo span { color: var(--cyan); }
+
+.footer-links {
+  display: flex; gap: 24px; list-style: none;
+}
+.footer-links a {
+  color: var(--dim); text-decoration: none;
+  font-size: 12px; letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--cyan); }
+
+.footer-copy {
+  font-size: 11px; color: var(--dim);
+  letter-spacing: 0.5px;
+}
+.footer-copy a { color: var(--cyan); text-decoration: none; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-links { display: none; }
+  .nvault-section { grid-template-columns: 1fr; gap: 40px; }
+  .nvault-code { order: 2; }
+  .nvault-info { order: 1; }
+  footer { flex-direction: column; text-align: center; }
+  .stats { gap: 32px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">NANO<span>.</span><sub>by genesis</sub></div>
+  <ul class="nav-links">
+    <li><a href="terminal.html">Terminal</a></li>
+    <li><a href="api-library.html">API Library</a></li>
+    <li><a href="docs.html">Docs</a></li>
+    <li><a href="terminal.html" class="nav-cta">Launch Terminal →</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">NANO TERMINAL · BY GENESIS GROUP</div>
+
+  <h1 class="hero-title">
+    APIs Are the <span class="accent">Future.</span><br>
+    Nano is Your <span class="accent2">Gateway.</span>
+  </h1>
+
+  <p class="hero-sub">
+    A scriptable API terminal that puts every service on the internet at your fingertips. Bring your own keys. Write automation scripts. No server. No signup. Just power.
+  </p>
+
+  <div class="hero-ctas">
+    <a href="terminal.html" class="btn-primary">▶ Launch Terminal</a>
+    <a href="api-library.html" class="btn-ghost">Explore APIs →</a>
+  </div>
+
+  <!-- ANIMATED TERMINAL DEMO -->
+  <div class="terminal-demo">
+    <div class="term-topbar">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+      <span class="term-title">NANO VAULT v4.0 — nano.genesisvault.xyz</span>
+    </div>
+    <div class="term-body" id="demo-out"></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">20<span>+</span></div>
+    <div class="stat-label">Commands</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num"><span>∞</span></div>
+    <div class="stat-label">API Keys</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">3<span>+</span></div>
+    <div class="stat-label">AI Providers</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">0<span>$</span></div>
+    <div class="stat-label">Cost to Use</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="section-label">// WHAT NANO DOES</div>
+  <div class="section-title">Everything you need.<br>Nothing you don't.</div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon ic-cyan">⚡</div>
+      <div class="feature-name">Bring Your Own Keys</div>
+      <div class="feature-desc">Add unlimited API keys from any provider. Stored locally in your browser — never sent to any server.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon ic-purple">🤖</div>
+      <div class="feature-name">Multi-AI Support</div>
+      <div class="feature-desc">Switch between Groq, Gemini, OpenRouter, and Qwen. Run AI commands directly from the terminal.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon ic-green">🔍</div>
+      <div class="feature-name">Recon & OSINT Tools</div>
+      <div class="feature-desc">DNS lookup, WHOIS, subdomain enumeration, IP geolocation, SSL checks — all in one place.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon ic-cyan">📜</div>
+      <div class="feature-name">.nvault Scripting</div>
+      <div class="feature-desc">Write automation scripts in our custom .nvault language. Chain commands, set variables, automate workflows.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon ic-red">🔐</div>
+      <div class="feature-name">Zero Surveillance</div>
+      <div class="feature-desc">No accounts. No tracking. No data leaves your device. Your keys and scripts live in your browser only.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon ic-green">💰</div>
+      <div class="feature-name">Crypto & Finance</div>
+      <div class="feature-desc">Live crypto prices, port scanning, and more. Built for builders, hackers, and developers.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<div class="how-section">
+  <div class="how-inner">
+    <div class="section-label">// HOW IT WORKS</div>
+    <div class="section-title" style="margin-bottom:48px">Up and running<br>in 60 seconds.</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">STEP 01</div>
+        <div class="step-title">Open the Terminal</div>
+        <div class="step-desc">No download. No signup. Launch directly in your browser at nano.genesisvault.xyz.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">STEP 02</div>
+        <div class="step-title">Add Your API Keys</div>
+        <div class="step-desc">Go to the API Keys tab. Add any key with any name. They're saved locally — never leave your device.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">STEP 03</div>
+        <div class="step-title">Run Commands</div>
+        <div class="step-desc">Type commands directly or write a .nvault script to automate multi-step workflows.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">STEP 04</div>
+        <div class="step-title">Automate & Share</div>
+        <div class="step-desc">Save scripts, export results, and build reusable workflows for any API on the internet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NVAULT SHOWCASE -->
+<div class="nvault-section">
+  <div class="nvault-code">
+    <div class="term-topbar">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+      <span class="term-title">recon.nvault</span>
+    </div>
+    <div class="code-body">
+      <span class="c-comment"># Full recon script</span><br>
+      <span class="c-key">#@require</span> <span class="c-val">GROQ_KEY</span><br>
+      <br>
+      <span class="c-cmd">set</span> TARGET = <span class="c-str">example.com</span><br>
+      <br>
+      <span class="c-comment"># Run recon chain</span><br>
+      <span class="c-cmd">dns</span> $TARGET<br>
+      <span class="c-cmd">whois</span> $TARGET<br>
+      <span class="c-cmd">subdomain</span> $TARGET<br>
+      <span class="c-cmd">ssl</span> $TARGET<br>
+      <br>
+      <span class="c-comment"># AI analysis of results</span><br>
+      <span class="c-cmd">groq</span> <span class="c-str">"summarize attack surface"</span><br>
+      <br>
+      <span class="c-comment"># Export findings</span><br>
+      <span class="c-cmd">export</span><br>
+    </div>
+  </div>
+
+  <div class="nvault-info">
+    <div class="section-label">// .NVAULT SCRIPTING</div>
+    <div class="section-title">Your own automation language.</div>
+    <p>Write scripts that chain API calls, set variables, run AI analysis, and export results — all in a clean, readable syntax built for the terminal.</p>
+    <p>Save scripts locally. Download them as .nvault files. Import them back anytime. Build a personal library of API workflows.</p>
+    <div class="tag-list">
+      <span class="tag cyan">variables</span>
+      <span class="tag green">command chaining</span>
+      <span class="tag purple">AI analysis</span>
+      <span class="tag cyan">export</span>
+      <span class="tag green">import</span>
+      <span class="tag">localhost storage</span>
+    </div>
+  </div>
+</div>
+
+<!-- CTA BANNER -->
+<div class="cta-banner">
+  <div class="cta-banner-title">Ready to build?</div>
+  <div class="cta-banner-sub">The terminal is open. The APIs are waiting.</div>
+  <div class="hero-ctas">
+    <a href="terminal.html" class="btn-primary">▶ Launch Terminal</a>
+    <a href="api-library.html" class="btn-ghost">Browse API Library →</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">NANO<span>.</span></div>
+  <ul class="footer-links">
+    <li><a href="terminal.html">Terminal</a></li>
+    <li><a href="api-library.html">API Library</a></li>
+    <li><a href="docs.html">Docs</a></li>
+  </ul>
+  <div class="footer-copy">
+    Built by <a href="https://genesisvault.xyz" target="_blank">Genesis Group</a> · All rights reserved
+  </div>
+</footer>
+
+<script>
+// ── ANIMATED TERMINAL DEMO ──
+const demoLines = [
+  { text: '  NANO VAULT v4.0 initialized', cls: 't-ok', delay: 300 },
+  { text: '  [+] 20 commands loaded', cls: 't-ok', delay: 600 },
+  { text: '', cls: 't-dim', delay: 900 },
+  { text: '$ subdomain genesisvault.xyz', cls: 't-prompt', delay: 1200, isCmd: true },
+  { text: '  [~] Querying crt.sh...', cls: 't-dim', delay: 1800 },
+  { text: '  Found: 8 subdomains', cls: 't-ok', delay: 2400 },
+  { text: '  • nano.genesisvault.xyz', cls: 't-info', delay: 2700 },
+  { text: '  • neowave.genesisvault.xyz', cls: 't-info', delay: 2900 },
+  { text: '  • api.genesisvault.xyz', cls: 't-info', delay: 3100 },
+  { text: '', cls: 't-dim', delay: 3400 },
+  { text: '$ groq "summarize attack surface"', cls: 't-prompt', delay: 3700, isCmd: true },
+  { text: '  [~] Querying Groq (llama-3.1)...', cls: 't-dim', delay: 4300 },
+  { text: '  ── GROQ ◈ ANALYSIS ──', cls: 't-purple', delay: 5000 },
+  { text: '  3 public subdomains detected.', cls: 't-out', delay: 5300 },
+  { text: '  Recommend SSL audit on all entries.', cls: 't-out', delay: 5600 },
+  { text: '', cls: '', delay: 5900 },
+  { text: '$ crypto BTC', cls: 't-prompt', delay: 6200, isCmd: true },
+  { text: '  Price : $67,420.00', cls: 't-bright', delay: 6900 },
+  { text: '  24h   : +2.4%', cls: 't-ok', delay: 7100 },
+  { text: '', cls: '', delay: 7400 },
+];
+
+const out = document.getElementById('demo-out');
+let i = 0;
+
+function addLine(line) {
+  if (i >= demoLines.length) {
+    // Restart
+    setTimeout(() => {
+      out.innerHTML = '';
+      i = 0;
+      runDemo();
+    }, 3000);
+    return;
+  }
+  const span = document.createElement('span');
+  span.className = 'tl ' + (line.cls || '');
+  if (line.isCmd) {
+    span.innerHTML = '<span style="color:var(--cyan)">$ </span><span style="color:var(--bright)">' + line.text.replace('$ ', '') + '</span>';
+  } else {
+    span.textContent = line.text;
+  }
+  out.appendChild(span);
+  out.scrollTop = out.scrollHeight;
+  i++;
+  if (i < demoLines.length) {
+    setTimeout(runDemo, demoLines[i].delay - demoLines[i-1].delay);
+  } else {
+    setTimeout(() => { out.innerHTML = ''; i = 0; runDemo(); }, 3000);
+  }
+}
+
+function runDemo() {
+  if (i < demoLines.length) addLine(demoLines[i]);
+}
+
+setTimeout(runDemo, demoLines[0].delay);
+
+// Add blinking cursor at end
+const cursor = document.createElement('span');
+cursor.className = 'tl';
+cursor.innerHTML = '<span style="color:var(--cyan)">$ </span><span class="cursor-blink"></span>';
+out.appendChild(cursor);
+</script>
+
+</body>
+</html>
