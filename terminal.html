@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NANO VAULT v2 — Script Terminal</title>
+<title>NANO VAULT v4.0 — Script Terminal</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600&display=swap');
 
@@ -1206,7 +1206,7 @@ async function cmdIP(args) {
   writeLine(`  ISP      : ${d.org}`, 't-out');
   writeLine(`  Lat/Lon  : ${d.latitude}, ${d.longitude}`, 't-out');
   writeSep();
-  lastOutput = `IP: ${ip}\nCity: ${d.city}\nRegion: ${d.region}\nCountry: ${d.country_name}\nISP: ${d.org}\nLat/Lon: ${d.latitude}, ${d.longitude}`;
+  lastOutput = `IP: ${d.ip}\nCity: ${d.city}\nRegion: ${d.region}\nCountry: ${d.country_name}\nISP: ${d.org}\nLat/Lon: ${d.latitude}, ${d.longitude}`;
   writeLine('[+] Done', 't-ok');
 }
 
@@ -1289,19 +1289,12 @@ async function cmdHeaders(args) {
     writeSep();
     writeLine(`  HEADERS: ${url}`, 't-info');
     writeSep();
-    writeLine(`  Status   : ${res.status}`, 't-out');
-    // Security headers check
-    const secHeaders = [
-      'content-security-policy',
-      'x-frame-options',
-      'x-content-type-options',
-      'strict-transport-security',
-      'referrer-policy',
-    ];
-    writeLine('  Security Headers:', 't-warn');
-    // Since we can't directly see response headers through allorigins, note limitation
-    writeLine('  [~] Full header scan requires direct access', 't-sys');
-    writeLine(`  [~] Response size: ${d.contents?.length || 0} bytes`, 't-out');
+    writeLine(`  Status       : ${res.status}`, 't-out');
+    writeLine(`  Response size: ${d.contents?.length || 0} bytes`, 't-out');
+    writeLine(`  HTTP URL     : ${d.status?.url || url}`, 't-out');
+    writeLine('', 't-sys');
+    writeLine('  [~] Note: Security headers (CSP, HSTS etc.) require', 't-sys');
+    writeLine('  [~] direct server access — use ssl for cert info', 't-sys');
     writeSep();
     writeLine('[+] Done', 't-ok');
   } catch {
@@ -1314,24 +1307,37 @@ async function cmdSSL(args) {
   const domain = args[0];
   if (!domain) { writeLine('[!] Usage: ssl <domain>', 't-err'); return; }
   writeLine(`[~] SSL check: ${domain}...`, 't-sys');
+  writeLine('  [~] Starting scan — polling every 5s (up to 60s)...', 't-sys');
   try {
-    const res = await fetch(`https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&startNew=on&all=done`);
-    const d = await res.json();
+    // Kick off scan
+    await fetch(`https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&startNew=on`);
+    // Poll until ready (max 12 attempts ~60s)
+    let d, attempts = 0;
+    while (attempts < 12) {
+      await new Promise(r => setTimeout(r, 5000));
+      const poll = await fetch(`https://api.ssllabs.com/api/v3/analyze?host=${encodeURIComponent(domain)}&all=done`);
+      d = await poll.json();
+      if (d.status === 'READY' || d.status === 'ERROR') break;
+      writeLine(`  [~] Scanning... (${(attempts + 1) * 5}s elapsed)`, 't-sys');
+      attempts++;
+    }
     writeSep();
     writeLine(`  SSL: ${domain}`, 't-info');
     writeSep();
     writeLine(`  Status  : ${d.status}`, 't-out');
-    if (d.endpoints && d.endpoints[0]) {
-      writeLine(`  Grade   : ${d.endpoints[0].grade || 'pending'}`, d.endpoints[0].grade === 'A' || d.endpoints[0].grade === 'A+' ? 't-ok' : 't-warn');
-      writeLine(`  Server  : ${d.endpoints[0].ipAddress}`, 't-out');
-    }
-    if (d.status === 'IN_PROGRESS' || d.status === 'DNS') {
-      writeLine('  [~] SSL Labs scan in progress — run again in 30s', 't-sys');
+    if (d.status === 'READY' && d.endpoints?.[0]) {
+      const ep = d.endpoints[0];
+      const grade = ep.grade || 'N/A';
+      writeLine(`  Grade   : ${grade}`, (grade === 'A' || grade === 'A+') ? 't-ok' : 't-warn');
+      writeLine(`  Server  : ${ep.ipAddress}`, 't-out');
+    } else if (d.status !== 'READY') {
+      writeLine('  [~] Scan timed out — try again in a moment', 't-warn');
     }
     writeSep();
+    lastOutput = `SSL Grade for ${domain}: ${d.endpoints?.[0]?.grade || 'pending'}`;
     writeLine('[+] Done', 't-ok');
-  } catch {
-    writeLine('[!] SSL check failed', 't-err');
+  } catch(e) {
+    writeLine('[!] SSL check failed: ' + e.message, 't-err');
   }
 }
 
