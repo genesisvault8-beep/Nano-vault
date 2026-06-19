@@ -1007,16 +1007,12 @@ function boot() {
   const out = document.getElementById('terminal-out');
   const lines = [
     ['', 't-sys'],
-    ['  ███╗   ██╗ █████╗ ███╗   ██╗ ██████╗ ', 't-info'],
-    ['  ████╗  ██║██╔══██╗████╗  ██║██╔═══██╗', 't-info'],
-    ['  ██╔██╗ ██║███████║██╔██╗ ██║██║   ██║', 't-cyan'],
-    ['  ██║╚██╗██║██╔══██║██║╚██╗██║██║   ██║', 't-cyan'],
-    ['  ██║ ╚████║██║  ██║██║ ╚████║╚██████╔╝', 't-info'],
-    ['  ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ', 't-info'],
+    ['  ╔══════════════════════════════════╗', 't-info'],
+    ['  ║  NANO VAULT  v4.0               ║', 't-cyan'],
+    ['  ║  .nvault Script Terminal        ║', 't-bright'],
+    ['  ║  Genesis Vault Platform         ║', 't-sys'],
+    ['  ╚══════════════════════════════════╝', 't-info'],
     ['', 't-sys'],
-    ['  NANO VAULT v4.0 — .nvault Script Terminal', 't-bright'],
-    ['  GENESIS VAULT PLATFORM | API EDITION', 't-sys'],
-    ['  ─────────────────────────────────────────', 't-sys'],
     ['  [+] .nvault script engine initialized', 't-ok'],
     ['  [+] API command registry loaded: ' + Object.keys(COMMANDS).length + ' commands', 't-ok'],
     ['  [~] Type help for commands', 't-sys'],
@@ -2135,20 +2131,40 @@ async function cmdPort(args) {
   if (!host || !port) { writeLine('[!] Usage: port <host> <port>', 't-err'); return; }
   writeLine(`[~] Checking ${host}:${port}...`, 't-sys');
   try {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`http://${host}:${port}`)}`);
+    // Use portscan.me public API — more reliable than allorigins proxy
+    const res = await fetch(`https://api.portscan.me/scan?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}`);
+    const d = await res.json();
     writeSep();
     writeLine(`  PORT CHECK: ${host}:${port}`, 't-info');
     writeSep();
-    writeLine(`  Status : ${res.ok ? 'OPEN / REACHABLE' : 'CLOSED / FILTERED'}`, res.ok ? 't-ok' : 't-err');
-    writeLine(`  HTTP   : ${res.status}`, 't-out');
+    if (d.open === true) {
+      writeLine(`  Status : OPEN`, 't-ok');
+    } else if (d.open === false) {
+      writeLine(`  Status : CLOSED / FILTERED`, 't-err');
+    } else {
+      // Fallback: try a timed fetch to the host directly
+      const start = Date.now();
+      try {
+        await Promise.race([
+          fetch(`https://${host}`, { mode: 'no-cors' }),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
+        ]);
+        writeLine(`  Status : LIKELY OPEN (responded in ${Date.now()-start}ms)`, 't-ok');
+      } catch {
+        writeLine(`  Status : CLOSED / FILTERED / TIMEOUT`, 't-err');
+      }
+    }
+    writeLine(`  Host   : ${host}`, 't-out');
+    writeLine(`  Port   : ${port}`, 't-out');
     writeSep();
-    lastOutput = `Port ${port} on ${host}: ${res.ok ? 'open' : 'closed'}`;
+    lastOutput = `Port ${port} on ${host}: ${d.open ? 'open' : 'closed'}`;
     writeLine('[+] Done', 't-ok');
-  } catch {
+  } catch(e) {
     writeSep();
     writeLine(`  PORT CHECK: ${host}:${port}`, 't-info');
     writeSep();
     writeLine('  Status : CLOSED / FILTERED / TIMEOUT', 't-err');
+    writeLine(`  Error  : ${e.message}`, 't-sys');
     writeSep();
     writeLine('[+] Done', 't-ok');
   }
@@ -2191,10 +2207,13 @@ async function cmdSubdomain(args) {
   const domain = args[0];
   if (!domain) { writeLine('[!] Usage: subdomain <domain>', 't-err'); return; }
   writeLine(`[~] Enumerating subdomains: ${domain}...`, 't-sys');
-  writeLine('  [~] Using crt.sh certificate transparency logs', 't-sys');
+  writeLine('  [~] Using crt.sh via CORS proxy...', 't-sys');
   try {
-    const res = await fetch(`https://crt.sh/?q=%.${encodeURIComponent(domain)}&output=json`);
-    const d = await res.json();
+    const crtUrl = `https://crt.sh/?q=%.${encodeURIComponent(domain)}&output=json`;
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(crtUrl)}`);
+    const wrapper = await res.json();
+    if (!wrapper.contents) throw new Error('No data returned from proxy');
+    const d = JSON.parse(wrapper.contents);
     const subs = [...new Set(d.map(e => e.name_value).join('\n').split('\n'))]
       .filter(s => s.endsWith(domain) && !s.includes('*'))
       .sort();
