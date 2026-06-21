@@ -1279,22 +1279,42 @@ async function cmdHeaders(args) {
   if (!url) { writeLine('[!] Usage: headers <url>', 't-err'); return; }
   if (!url.startsWith('http')) url = 'https://' + url;
   writeLine(`[~] Checking headers: ${url}...`, 't-sys');
+  writeLine('  [~] Using HackerTarget HTTP headers API...', 't-sys');
   try {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-    const d = await res.json();
+    const domain = url.replace(/^https?:\/\//, '').split('/')[0];
+    const res = await fetch(`https://api.hackertarget.com/httpheaders/?q=${encodeURIComponent('https://' + domain)}`);
+    const text = await res.text();
+    if (text.includes('error') || text.includes('API count')) {
+      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+      return;
+    }
     writeSep();
-    writeLine(`  HEADERS: ${url}`, 't-info');
+    writeLine(`  HEADERS: ${domain}`, 't-info');
     writeSep();
-    writeLine(`  Status       : ${res.status}`, 't-out');
-    writeLine(`  Response size: ${d.contents?.length || 0} bytes`, 't-out');
-    writeLine(`  HTTP URL     : ${d.status?.url || url}`, 't-out');
-    writeLine('', 't-sys');
-    writeLine('  [~] Note: Security headers (CSP, HSTS etc.) require', 't-sys');
-    writeLine('  [~] direct server access — use ssl for cert info', 't-sys');
+    const lines = text.trim().split('\n');
+    // Check for security headers
+    const secHeaders = {
+      'content-security-policy': false,
+      'x-frame-options': false,
+      'x-content-type-options': false,
+      'strict-transport-security': false,
+      'referrer-policy': false,
+    };
+    lines.forEach(line => {
+      writeLine(`  ${line}`, 't-out');
+      const lower = line.toLowerCase();
+      Object.keys(secHeaders).forEach(h => { if (lower.startsWith(h)) secHeaders[h] = true; });
+    });
     writeSep();
+    writeLine('  SECURITY HEADERS:', 't-warn');
+    Object.entries(secHeaders).forEach(([h, found]) => {
+      writeLine(`  ${found ? '✓' : '✗'} ${h}`, found ? 't-ok' : 't-err');
+    });
+    writeSep();
+    lastOutput = text;
     writeLine('[+] Done', 't-ok');
-  } catch {
-    writeLine('[!] Could not fetch headers — check URL', 't-err');
+  } catch(e) {
+    writeLine('[!] Could not fetch headers: ' + e.message, 't-err');
   }
 }
 
@@ -2130,40 +2150,42 @@ async function cmdPort(args) {
   const host = args[0], port = args[1];
   if (!host || !port) { writeLine('[!] Usage: port <host> <port>', 't-err'); return; }
   writeLine(`[~] Checking ${host}:${port}...`, 't-sys');
+  writeLine('  [~] Using HackerTarget port scan...', 't-sys');
   try {
-    // Use portscan.me public API — more reliable than allorigins proxy
-    const res = await fetch(`https://api.portscan.me/scan?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}`);
-    const d = await res.json();
-    writeSep();
-    writeLine(`  PORT CHECK: ${host}:${port}`, 't-info');
-    writeSep();
-    if (d.open === true) {
-      writeLine(`  Status : OPEN`, 't-ok');
-    } else if (d.open === false) {
-      writeLine(`  Status : CLOSED / FILTERED`, 't-err');
-    } else {
-      // Fallback: try a timed fetch to the host directly
-      const start = Date.now();
-      try {
-        await Promise.race([
-          fetch(`https://${host}`, { mode: 'no-cors' }),
-          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000))
-        ]);
-        writeLine(`  Status : LIKELY OPEN (responded in ${Date.now()-start}ms)`, 't-ok');
-      } catch {
-        writeLine(`  Status : CLOSED / FILTERED / TIMEOUT`, 't-err');
-      }
+    const res = await fetch(`https://api.hackertarget.com/nmap/?q=${encodeURIComponent(host)}`);
+    const text = await res.text();
+    if (text.includes('error') || text.includes('API count')) {
+      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+      return;
     }
-    writeLine(`  Host   : ${host}`, 't-out');
-    writeLine(`  Port   : ${port}`, 't-out');
     writeSep();
-    lastOutput = `Port ${port} on ${host}: ${d.open ? 'open' : 'closed'}`;
+    writeLine(`  PORT SCAN: ${host}`, 't-info');
+    writeSep();
+    // Parse nmap output for specific port
+    const lines = text.split('\n');
+    const portLine = lines.find(l => l.includes(`${port}/`));
+    if (portLine) {
+      const isOpen = portLine.includes('open');
+      writeLine(`  Port ${port} : ${isOpen ? 'OPEN' : 'CLOSED / FILTERED'}`, isOpen ? 't-ok' : 't-err');
+      writeLine(`  Detail : ${portLine.trim()}`, 't-out');
+    } else {
+      writeLine(`  Port ${port} : NOT FOUND IN SCAN`, 't-warn');
+    }
+    writeSep();
+    // Show all open ports found
+    const openPorts = lines.filter(l => l.includes('open'));
+    if (openPorts.length) {
+      writeLine('  All open ports:', 't-warn');
+      openPorts.forEach(l => writeLine(`  ${l.trim()}`, 't-out'));
+    }
+    writeSep();
+    lastOutput = text;
     writeLine('[+] Done', 't-ok');
   } catch(e) {
     writeSep();
     writeLine(`  PORT CHECK: ${host}:${port}`, 't-info');
     writeSep();
-    writeLine('  Status : CLOSED / FILTERED / TIMEOUT', 't-err');
+    writeLine('  Status : FAILED', 't-err');
     writeLine(`  Error  : ${e.message}`, 't-sys');
     writeSep();
     writeLine('[+] Done', 't-ok');
@@ -2207,16 +2229,15 @@ async function cmdSubdomain(args) {
   const domain = args[0];
   if (!domain) { writeLine('[!] Usage: subdomain <domain>', 't-err'); return; }
   writeLine(`[~] Enumerating subdomains: ${domain}...`, 't-sys');
-  writeLine('  [~] Using crt.sh via CORS proxy...', 't-sys');
+  writeLine('  [~] Using HackerTarget API...', 't-sys');
   try {
-    const crtUrl = `https://crt.sh/?q=%.${encodeURIComponent(domain)}&output=json`;
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(crtUrl)}`);
-    const wrapper = await res.json();
-    if (!wrapper.contents) throw new Error('No data returned from proxy');
-    const d = JSON.parse(wrapper.contents);
-    const subs = [...new Set(d.map(e => e.name_value).join('\n').split('\n'))]
-      .filter(s => s.endsWith(domain) && !s.includes('*'))
-      .sort();
+    const res = await fetch(`https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(domain)}`);
+    const text = await res.text();
+    if (text.includes('error') || text.includes('API count')) {
+      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+      return;
+    }
+    const subs = [...new Set(text.trim().split('\n').map(l => l.split(',')[0]).filter(s => s && s.endsWith(domain)))].sort();
     writeSep();
     writeLine(`  SUBDOMAINS: ${domain}`, 't-info');
     writeSep();
