@@ -636,6 +636,64 @@ footer span { color: var(--text); white-space: nowrap; }
 .help-chip .cmd { color: var(--cyan); }
 .help-chip .desc { color: var(--dim); margin-top: 2px; font-size: 8px; letter-spacing: 1px; }
 
+/* ══════════════════════════════════════════════
+   DESKTOP / LAPTOP RESPONSIVE LAYER
+   Mobile styles above are untouched. This block only
+   activates on wider viewports and centers + scales
+   the existing layout, it does not restructure it.
+   ══════════════════════════════════════════════ */
+@media (min-width: 900px) {
+  body {
+    align-items: center;
+  }
+  body > header,
+  body > .tab-bar,
+  body > .main {
+    width: 100%;
+    max-width: 860px;
+  }
+  header {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .logo {
+    font-size: 20px;
+  }
+  .tab-btn {
+    font-size: 11px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .terminal-output {
+    font-size: 13px;
+    line-height: 1.7;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .modal-textarea {
+    font-size: 13px;
+  }
+  .help-chip {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .help-chip .desc {
+    font-size: 9px;
+  }
+  /* Slightly larger tap targets / readability for keyboard+mouse use */
+  input, textarea, button {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1300px) {
+  body > header,
+  body > .tab-bar,
+  body > .main {
+    max-width: 980px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -855,7 +913,7 @@ const COMMANDS = {
   },
   headers: {
     desc: 'HTTP headers check',
-    requires: [],
+    requires: ['HACKERTARGET_KEY'],
     usage: 'headers <url>',
     run: cmdHeaders,
   },
@@ -957,7 +1015,7 @@ const COMMANDS = {
   },
   port: {
     desc: 'Check if a port is open',
-    requires: [],
+    requires: ['HACKERTARGET_KEY'],
     usage: 'port <host> <port>',
     run: cmdPort,
   },
@@ -969,7 +1027,7 @@ const COMMANDS = {
   },
   subdomain: {
     desc: 'Enumerate subdomains of a domain',
-    requires: [],
+    requires: ['HACKERTARGET_KEY'],
     usage: 'subdomain <domain>',
     run: cmdSubdomain,
   },
@@ -1282,10 +1340,20 @@ async function cmdHeaders(args) {
   writeLine('  [~] Using HackerTarget HTTP headers API...', 't-sys');
   try {
     const domain = url.replace(/^https?:\/\//, '').split('/')[0];
-    const res = await fetch(`https://api.hackertarget.com/httpheaders/?q=${encodeURIComponent('https://' + domain)}`);
+    const htKey = state.apiKeys['HACKERTARGET_KEY'];
+    const res = await fetch(`https://api.hackertarget.com/httpheaders/?q=${encodeURIComponent('https://' + domain)}&apikey=${encodeURIComponent(htKey)}`);
     const text = await res.text();
-    if (text.includes('error') || text.includes('API count')) {
-      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+    // Catch rate limiting: HTTP status, HackerTarget's own error wording, and lack of real header-shaped lines
+    const looksRateLimited =
+      res.status === 429 ||
+      !res.ok ||
+      /error/i.test(text) ||
+      /api count exceeded/i.test(text) ||
+      /too many requests/i.test(text) ||
+      !text.includes(':');
+    if (looksRateLimited) {
+      writeLine('[!] HackerTarget quota reached for your key — resets daily', 't-warn');
+      writeLine(`  [~] Raw response: ${text.slice(0, 120)}`, 't-dim');
       return;
     }
     writeSep();
@@ -2152,10 +2220,13 @@ async function cmdPort(args) {
   writeLine(`[~] Checking ${host}:${port}...`, 't-sys');
   writeLine('  [~] Using HackerTarget port scan...', 't-sys');
   try {
-    const res = await fetch(`https://api.hackertarget.com/nmap/?q=${encodeURIComponent(host)}`);
+    const htKey = state.apiKeys['HACKERTARGET_KEY'];
+    const res = await fetch(`https://api.hackertarget.com/nmap/?q=${encodeURIComponent(host)}&apikey=${encodeURIComponent(htKey)}`);
     const text = await res.text();
-    if (text.includes('error') || text.includes('API count')) {
-      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+    const portRateLimited = res.status === 429 || !res.ok || /error/i.test(text) || /api count exceeded/i.test(text) || /too many requests/i.test(text);
+    if (portRateLimited) {
+      writeLine('[!] HackerTarget quota reached for your key — resets daily', 't-warn');
+      writeLine(`  [~] Raw response: ${text.slice(0, 120)}`, 't-dim');
       return;
     }
     writeSep();
@@ -2231,10 +2302,13 @@ async function cmdSubdomain(args) {
   writeLine(`[~] Enumerating subdomains: ${domain}...`, 't-sys');
   writeLine('  [~] Using HackerTarget API...', 't-sys');
   try {
-    const res = await fetch(`https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(domain)}`);
+    const htKey = state.apiKeys['HACKERTARGET_KEY'];
+    const res = await fetch(`https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(domain)}&apikey=${encodeURIComponent(htKey)}`);
     const text = await res.text();
-    if (text.includes('error') || text.includes('API count')) {
-      writeLine('[!] HackerTarget rate limit reached — try again later', 't-warn');
+    const subRateLimited = res.status === 429 || !res.ok || /error/i.test(text) || /api count exceeded/i.test(text) || /too many requests/i.test(text);
+    if (subRateLimited) {
+      writeLine('[!] HackerTarget quota reached for your key — resets daily', 't-warn');
+      writeLine(`  [~] Raw response: ${text.slice(0, 120)}`, 't-dim');
       return;
     }
     const subs = [...new Set(text.trim().split('\n').map(l => l.split(',')[0]).filter(s => s && s.endsWith(domain)))].sort();
